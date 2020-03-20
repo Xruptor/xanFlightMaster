@@ -18,6 +18,8 @@ local function Debug(...)
     if debugf then debugf:AddMessage(string.join(", ", tostringall(...))) end
 end
 
+local currPinList = {}
+
 ----------------------
 --      Enable      --
 ----------------------
@@ -90,6 +92,8 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 	local isTaxiMap = taxiFrameID == Enum.UIMapSystem.Taxi
 	local numNodes = NumTaxiNodes()
 	local mapID = GetTaxiMapID()
+	
+	currPinList = {} --reset it
 	
 	--Debug("NumTaxiNodes", numNodes)
 	--Debug("GetTaxiMapID", mapID)
@@ -169,23 +173,23 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 			
 			--POOPCRAP = Enum.FlightPathState
 
-			--Debug(fnSlotIndex, fnNodeID,  fnName, flightnode:GetTaxiNodeState(), fnFaction, fnFlightType)
+			--Debug("1--", fnSlotIndex, fnNodeID,  fnName, flightnode:GetTaxiNodeState(), fnFaction, fnFlightType)
 			--local fnX, fnY = flightnode.taxiNodeData.position:GetXY()
 			--local effScale = flightnode:GetEffectiveScale()
 			
-			--Debug("-   FN_Button:".. fnSlotIndex, fnNodeID, fnName, fnX, fnY, flightnode:IsShown())
+			--Debug("2--", fnSlotIndex, fnNodeID, fnName, fnX, fnY, flightnode:IsShown())
 			
 			--if flightnode:IsShown() then
 				--local point, relativeTo, relativePoint, xOffset, yOffset = flightnode:GetPoint()
 
-				--Debug(point, relativeTo, relativePoint, fnSlotIndex, xOffset, yOffset)
-				--Debug(flightnode:GetParent())
-				--Debug(flightnode:GetHeight(), flightnode:GetWidth(), flightnode.Icon:GetHeight(), flightnode.Icon:GetWidth())
-				--Debug(flightnode:GetSize())
-				--Debug(fnSlotIndex, fnX, fnY, xOffset, yOffset)
-				--Debug(flightnode:GetParent():GetHeight(), flightnode:GetParent():GetWidth())
+				--Debug("3--", point, relativeTo, relativePoint, fnSlotIndex, xOffset, yOffset)
+				--Debug("3--", flightnode:GetParent())
+				--Debug("3--", flightnode:GetHeight(), flightnode:GetWidth(), flightnode.Icon:GetHeight(), flightnode.Icon:GetWidth())
+				--Debug("3--", flightnode:GetSize())
+				--Debug("3--", fnSlotIndex, fnX, fnY, xOffset, yOffset)
+				--Debug("3--", flightnode:GetParent():GetHeight(), flightnode:GetParent():GetWidth())
 				
-				--Debug(flightnode:GetScale(), flightnode:GetEffectiveScale())
+				--Debug("4--", flightnode:GetScale(), flightnode:GetEffectiveScale())
 				
 				
 				--local canvas = self:GetCanvas()
@@ -195,16 +199,18 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 				-- local testX = (canvas:GetWidth() * fnX) / scale
 				-- local testY = -(canvas:GetHeight() * fnY) / scale
 				
-				-- Debug(testX, testY)
+				-- Debug("5--", testX, testY)
 				--pin:SetPoint("CENTER", canvas, "TOPLEFT", (canvas:GetWidth() * x) / scale, -(canvas:GetHeight() * y) / scale)
 			
 			--end
 			
 			
-
+			--TODO put an option to allow UNREACHABLE or DISTANT flightnodes to show up
 			
-			--we aren't showing the flightpath
-			if not flightnode:IsShown() then
+			--we aren't showing the flightpath and don't show flightpaths that are extremely distant or unreachable
+			if not flightnode:IsShown() and fnFlightType ~= "DISTANT" then
+			
+			--Debug("99--", fnSlotIndex, fnNodeID,  fnName, flightnode:GetTaxiNodeState(), fnFaction, fnFlightType)
 			
 				--if we don't have our pin node to work with then create it
 				local parent = flightnode:GetParent()
@@ -223,10 +229,13 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 				unknownPin:SetHeight(iconSize + 5)
 				unknownPin:SetWidth(iconSize + 5)
 				unknownPin:SetScale(scale)
+				unknownPin.oldScale = scale
 				unknownPin.fnNodeID = fnNodeID
 				unknownPin.fnName = fnName
 				unknownPin.fnSlotIndex = fnSlotIndex
 				unknownPin.fnFaction = fnFaction
+				unknownPin.parentNode = flightnode
+				table.insert(currPinList, unknownPin)
 				
 				local testX = (parent:GetWidth() * fnX) / scale
 				local testY = -(parent:GetHeight() * fnY) / scale
@@ -236,6 +245,7 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 				pinIcon:SetTexture("Interface\\AddOns\\xanFlightMaster\\media\\taxi-icon")
 				pinIcon:SetSize(iconSize, iconSize)
 				pinIcon:SetPoint("TOPLEFT", unknownPin, "TOPLEFT")
+				unknownPin.pinIcon = pinIcon
 				
 				local r, g, b, a = ToRGBA(XFM_DB.color)
 				
@@ -269,6 +279,23 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 			end
 			
 		end
+
+		hooksecurefunc(FlightMapFrame, "OnCanvasScaleChanged", function(self)
+			--local scale = self:GetCanvasZoomPercent()
+			for i = 1, #currPinList do
+			
+				local flightnode = currPinList[i].parentNode
+				local parentScale = flightnode:GetScale()
+				local parent = flightnode:GetParent()
+				local fnX, fnY = flightnode.taxiNodeData.position:GetXY()
+				local testX = (parent:GetWidth() * fnX) / parentScale
+				local testY = -(parent:GetHeight() * fnY) / parentScale
+				
+				currPinList[i]:SetScale(parentScale)
+				currPinList[i]:SetPoint("CENTER", parent, "TOPLEFT", testX, testY)
+			end
+		end)
+		
 		
 	end
 
