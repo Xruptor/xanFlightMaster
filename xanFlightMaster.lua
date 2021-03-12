@@ -98,6 +98,9 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 	--Debug("NumTaxiNodes", numNodes)
 	--Debug("GetTaxiMapID", mapID)
 	
+	--Tourist GatherFlightnodeData()
+	--Tourist:GetFlightnodeLookupTable()
+	
 	for i = 1, numNodes do
 		local taxiType = TaxiNodeGetType(i)
 		local taxiName = TaxiNodeName(i)
