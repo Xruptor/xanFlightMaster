@@ -7,16 +7,32 @@ addon = _G[ADDON_NAME]
 local L = LibStub("AceLocale-3.0"):GetLocale(ADDON_NAME)
 local Tourist = LibStub("LibTourist-3.0")
 
-addon:SetScript("OnEvent", function(self, event, ...) 
-	if self[event] then 
-		return self[event](self, event, ...)
-	end 
-end)
-
 local debugf = tekDebug and tekDebug:GetFrame(ADDON_NAME)
 local function Debug(...)
     if debugf then debugf:AddMessage(string.join(", ", tostringall(...))) end
 end
+
+addon:RegisterEvent("ADDON_LOADED")
+addon:SetScript("OnEvent", function(self, event, ...)
+	if event == "ADDON_LOADED" or event == "PLAYER_LOGIN" then
+		if event == "ADDON_LOADED" then
+			local arg1 = ...
+			if arg1 and arg1 == ADDON_NAME then
+				self:UnregisterEvent("ADDON_LOADED")
+				self:RegisterEvent("PLAYER_LOGIN")
+			end
+			return
+		end
+		if IsLoggedIn() then
+			self:EnableAddon(event, ...)
+			self:UnregisterEvent("PLAYER_LOGIN")
+		end
+		return
+	end
+	if self[event] then
+		return self[event](self, event, ...)
+	end
+end)
 
 local currPinList = {}
 
@@ -24,7 +40,7 @@ local currPinList = {}
 --      Enable      --
 ----------------------
 
-function addon:PLAYER_LOGIN()
+function addon:EnableAddon()
 
 	--do DB stuff
 	if not XFM_DB then XFM_DB = {} end
@@ -35,12 +51,11 @@ function addon:PLAYER_LOGIN()
 	
 	addon:RegisterEvent("TAXIMAP_OPENED")
 	addon:RegisterEvent("TAXIMAP_CLOSED")
-	 
+	
+	if addon.configFrame then addon.configFrame:EnableConfig() end
+	
 	local ver = GetAddOnMetadata(ADDON_NAME,"Version") or '1.0'
 	DEFAULT_CHAT_FRAME:AddMessage(string.format("|cFF99CC33%s|r [v|cFF20ff20%s|r] loaded", ADDON_NAME, ver or "1.0"))
-	
-	self:UnregisterEvent("PLAYER_LOGIN")
-	self.PLAYER_LOGIN = nil
 end
 
 local function GetNodeID(mapID, slot)
@@ -320,5 +335,3 @@ function addon:TAXIMAP_OPENED(event, taxiFrameID)
 	-- UnitOnTaxi("player")
 	
 end
-
-if IsLoggedIn() then addon:PLAYER_LOGIN() else addon:RegisterEvent("PLAYER_LOGIN") end

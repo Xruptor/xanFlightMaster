@@ -4,9 +4,8 @@ if not _G[ADDON_NAME] then
 end
 addon = _G[ADDON_NAME]
 
-addon.configEvent = CreateFrame("frame", ADDON_NAME.."_config_eventFrame",UIParent)
-local configEvent = addon.configEvent
-configEvent:SetScript("OnEvent", function(self, event, ...) if self[event] then return self[event](self, event, ...) end end)
+addon.configFrame = CreateFrame("frame", ADDON_NAME.."_config_eventFrame",UIParent)
+local configFrame = addon.configFrame
 
 local L = LibStub("AceLocale-3.0"):GetLocale(ADDON_NAME)
 
@@ -205,7 +204,7 @@ local function LoadAboutFrame()
 	return about
 end
 
-function configEvent:PLAYER_LOGIN()
+function configFrame:EnableConfig()
 	
 	addon.aboutPanel = LoadAboutFrame()
 
@@ -213,8 +212,4 @@ function configEvent:PLAYER_LOGIN()
 	local btnColorPicker = createColorPicker(addon.aboutPanel, XFM_DB, "color", "Change undiscovered flight path icon color.")
 	addConfigEntry(btnColorPicker, 0, -20)
 	addon.aboutPanel.btnColorPicker = btnColorPicker
-	
-	configEvent:UnregisterEvent("PLAYER_LOGIN")
 end
-
-if IsLoggedIn() then configEvent:PLAYER_LOGIN() else configEvent:RegisterEvent("PLAYER_LOGIN") end
